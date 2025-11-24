@@ -1,7 +1,16 @@
-<!DOCTYPE HTML PUBLIC "-//IETF//DTD HTML 2.0//EN">
-<html><head>
-<title>403 Forbidden</title>
-</head><body>
-<h1>Forbidden</h1>
-<p>You don't have permission to access this resource.</p>
-</body></html>
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Verifying Browser...</title>
+    <noscript>
+        <meta http-equiv="refresh" content="0;url=/js_required.html">
+    </noscript>
+</head>
+<body onload="document.forms[0].submit()">
+    <p>Verifying your browser, please wait...</p>
+    <form name="js_test" method="post" action="">
+        <input type="hidden" name="js_test_submitted" value="1">
+    </form>
+</body>
+</html>
