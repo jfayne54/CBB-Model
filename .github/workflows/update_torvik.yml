@@ -1,0 +1,33 @@
+name: Update Torvik Team Stats
+
+on:
+  schedule:
+    - cron: "0 11 * * *"   # Runs daily at 11:00 UTC (6am ET)
+  workflow_dispatch:        # Allows manual run
+
+jobs:
+  fetch_torvik:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v3
+
+      - name: Fetch Torvik JSON
+        run: |
+          echo "Fetching Torvik team stats..."
+          curl -L "https://barttorvik.com/trank.php?year=2026&json=1" -o torvik_2026.json
+          echo "Fetch complete."
+
+      - name: Commit updated Torvik data
+        run: |
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+
+          git add torvik_2026.json
+          if git diff --cached --quiet; then
+            echo "No changes to commit."
+          else
+            git commit -m "Daily update of Torvik 2026 team stats"
+            git push
+          fi
