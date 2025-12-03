@@ -2,8 +2,8 @@ name: Update Torvik Team Stats
 
 on:
   schedule:
-    - cron: "0 11 * * *"   # Runs daily at 11:00 UTC (6am ET)
-  workflow_dispatch:        # Allows manual run
+    - cron: "0 11 * * *"   # daily at 11:00 UTC (6am ET)
+  workflow_dispatch:
 
 jobs:
   fetch_torvik:
@@ -13,21 +13,53 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@v3
 
-      - name: Fetch Torvik JSON
+      - name: Install tools
+        run: sudo apt-get update && sudo apt-get install -y jq curl
+
+      - name: Fetch Torvik JSON with Browser Headers + Validation
         run: |
-          echo "Fetching Torvik team stats..."
-          curl -L "https://barttorvik.com/trank.php?year=2026&json=1" -o torvik_2026.json
-          echo "Fetch complete."
+          echo "Fetching Torvik JSON with browser headers…"
+
+          URL="https://barttorvik.com/trank.php?year=2026&json=1"
+          OUT="teamstats-2026.json"
+          SUCCESS=0
+
+          for i in {1..4}; do
+            echo "Attempt $i..."
+
+            curl -L \
+              -A "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36" \
+              -H "Accept: application/json, text/plain, */*" \
+              -H "Referer: https://barttorvik.com/" \
+              -H "Origin: https://barttorvik.com" \
+              -H "Sec-Fetch-Site: same-origin" \
+              -H "Sec-Fetch-Mode: cors" \
+              -H "Sec-Fetch-Dest: empty" \
+              "$URL" -o $OUT
+
+            echo "Preview of saved file:"
+            head -n 20 $OUT
+
+            if jq empty $OUT 2>/dev/null; then
+              echo "JSON validation passed!"
+              SUCCESS=1
+              break
+            else
+              echo "Invalid JSON — Cloudflare likely intercepted. Retrying..."
+              sleep 4
+            fi
+          done
+
+          if [ $SUCCESS -eq 0 ]; then
+            echo "❌ FAILED: Could not fetch valid Torvik JSON after 4 attempts."
+            exit 1
+          fi
 
       - name: Commit updated Torvik data
         run: |
           git config user.name "github-actions"
           git config user.email "github-actions@github.com"
 
-          git add torvik_2026.json
-          if git diff --cached --quiet; then
-            echo "No changes to commit."
-          else
-            git commit -m "Daily update of Torvik 2026 team stats"
-            git push
-          fi
+          git add teamstats-2026.json
+          git commit -m "Updated Torvik teamstats-2026.json" || echo "No changes to commit."
+          git push
